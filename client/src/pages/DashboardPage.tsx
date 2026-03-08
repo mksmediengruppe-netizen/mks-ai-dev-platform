@@ -39,7 +39,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       {/* Page header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-100 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 md:px-6 py-4 bg-white border-b border-slate-100 flex-shrink-0">
         <div>
           <h1 className="text-lg font-bold text-slate-800" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
             Dashboard
@@ -59,9 +59,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           {STATS.map(({ icon: Icon, label, value, trend, iconBg, iconColor, trendColor }) => (
             <div key={label} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
               <div className="flex items-start justify-between mb-3">
@@ -81,7 +81,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Two columns */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
           {/* Recent Activity */}
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">

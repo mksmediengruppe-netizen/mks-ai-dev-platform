@@ -76,7 +76,7 @@ export default function LoginPage() {
               AI Dev Team
             </span>
           </div>
-          <p className="text-blue-200/70 text-xs ml-12">Platform · Milestone 6</p>
+          <p className="text-blue-200/70 text-xs ml-12">Platform · Milestone 7</p>
         </div>
 
         {/* Main content */}
@@ -112,7 +112,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right: Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8 bg-slate-50">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-3 mb-10 justify-center">

@@ -1,16 +1,18 @@
 /* ============================================================
    AppLayout — Professional Light sidebar + main content
-   White sidebar with blue accent, clean borders, shadow depth
+   MOBILE: hamburger menu, overlay, collapsible sidebar
+   DESKTOP: persistent sidebar with collapse toggle
    ============================================================ */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Bot, LayoutDashboard, MessageSquare, FileText,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
-  Zap, Code2, Globe, Brain, BarChart2, Puzzle, ShieldCheck
+  Zap, Code2, Globe, Brain, BarChart2, Puzzle, ShieldCheck,
+  Menu, X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,9 +45,24 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed]     = useState(false);
+  const [mobileOpen, setMobileOpen]   = useState(false);
+  const [isMobile, setIsMobile]       = useState(false);
   const [location] = useLocation();
   const { user, logout, hasRole } = useAuth();
+
+  // Detect mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location]);
 
   const handleLogout = () => {
     logout();
@@ -65,158 +82,190 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ? "role-operator"
     : "role-viewer";
 
-  const navLinkStyle = (href: string) => ({
-    color:      isActive(href) ? "#2563eb" : "#64748b",
-    background: isActive(href) ? "#eff6ff" : "transparent",
-    fontWeight: isActive(href) ? 500 : 400,
-  });
+  const sidebarWidth = isMobile ? "280px" : collapsed ? "60px" : "240px";
 
-  const onEnter = (e: React.MouseEvent, href: string) => {
-    if (!isActive(href)) {
-      (e.currentTarget as HTMLElement).style.background = "#f8fafc";
-      (e.currentTarget as HTMLElement).style.color = "#334155";
-    }
+  const NavLink = ({ item }: { item: NavItem }) => {
+    const active = isActive(item.href);
+    const showLabel = isMobile || !collapsed;
+    return (
+      <Link href={item.href}>
+        <a
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
+          style={{
+            color:      active ? "#2563eb" : "#64748b",
+            background: active ? "#eff6ff" : "transparent",
+            fontWeight: active ? 500 : 400,
+          }}
+          onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "#f8fafc"; (e.currentTarget as HTMLElement).style.color = "#334155"; } }}
+          onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#64748b"; } }}
+        >
+          <item.icon className="w-4 h-4 flex-shrink-0" />
+          {showLabel && <span className="truncate">{item.label}</span>}
+        </a>
+      </Link>
+    );
   };
-  const onLeave = (e: React.MouseEvent, href: string) => {
-    if (!isActive(href)) {
-      (e.currentTarget as HTMLElement).style.background = "transparent";
-      (e.currentTarget as HTMLElement).style.color = "#64748b";
-    }
-  };
+
+  const SidebarContent = () => (
+    <>
+      {/* Logo */}
+      <div className="flex items-center h-14 px-4 flex-shrink-0 border-b border-slate-100">
+        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <Bot className="w-4 h-4 text-white" />
+        </div>
+        {(isMobile || !collapsed) && (
+          <div className="ml-3 overflow-hidden flex-1">
+            <p className="text-slate-800 text-sm font-bold leading-tight truncate"
+              style={{ fontFamily: "Geist, Inter, sans-serif" }}>
+              AI Dev Team
+            </p>
+            <p className="text-slate-400 text-xs">Platform M7</p>
+          </div>
+        )}
+        {isMobile && (
+          <button onClick={() => setMobileOpen(false)} className="ml-auto p-1 text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {NAV_ITEMS.map(item => <NavLink key={item.href + item.label} item={item} />)}
+
+        {/* Intelligence section */}
+        <>
+          {(isMobile || !collapsed) && (
+            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
+              Intelligence
+            </p>
+          )}
+          {M7_NAV.map(item => <NavLink key={item.href} item={item} />)}
+        </>
+
+        {/* Admin section */}
+        {ADMIN_NAV.some(item => !item.roles || item.roles.some(r => hasRole(r as any))) && (
+          <>
+            {(isMobile || !collapsed) && (
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
+                Admin
+              </p>
+            )}
+            {ADMIN_NAV.map(item => {
+              if (item.roles && !item.roles.some(r => hasRole(r as any))) return null;
+              return <NavLink key={item.href + item.label} item={item} />;
+            })}
+          </>
+        )}
+      </nav>
+
+      {/* User section */}
+      <div className="p-3 flex-shrink-0 border-t border-slate-100">
+        {(isMobile || !collapsed) ? (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">
+                {user?.name?.charAt(0).toUpperCase() || "U"}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-700 text-xs font-semibold truncate">{user?.name}</p>
+              <span className={roleBadgeClass}>{user?.role}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-full h-8 text-slate-400 hover:text-red-500 hover:bg-red-50"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    </>
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* Sidebar */}
-      <aside
-        className="flex flex-col flex-shrink-0 transition-all duration-200 relative bg-white"
-        style={{
-          width: collapsed ? "60px" : "240px",
-          borderRight: "1px solid #e2e8f0",
-          boxShadow: "1px 0 0 0 #f1f5f9",
-        }}
-      >
-        {/* Logo */}
-        <div className="flex items-center h-14 px-4 flex-shrink-0 border-b border-slate-100">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
-            <Bot className="w-4 h-4 text-white" />
-          </div>
-          {!collapsed && (
-            <div className="ml-3 overflow-hidden">
-              <p className="text-slate-800 text-sm font-bold leading-tight truncate"
-                style={{ fontFamily: "Geist, Inter, sans-serif" }}>
+      {/* Mobile overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — desktop persistent, mobile slide-in */}
+      {isMobile ? (
+        <aside
+          className="fixed top-0 left-0 h-full flex flex-col bg-white z-40 transition-transform duration-250"
+          style={{
+            width: sidebarWidth,
+            transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+            borderRight: "1px solid #e2e8f0",
+            boxShadow: mobileOpen ? "4px 0 24px rgba(0,0,0,0.12)" : "none",
+          }}
+        >
+          <SidebarContent />
+        </aside>
+      ) : (
+        <aside
+          className="flex flex-col flex-shrink-0 transition-all duration-200 relative bg-white"
+          style={{
+            width: sidebarWidth,
+            borderRight: "1px solid #e2e8f0",
+            boxShadow: "1px 0 0 0 #f1f5f9",
+          }}
+        >
+          <SidebarContent />
+          {/* Collapse toggle — desktop only */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="absolute -right-3 top-16 w-6 h-6 rounded-full flex items-center justify-center z-20 transition-colors bg-white border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 shadow-sm"
+          >
+            {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+          </button>
+        </aside>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1 overflow-hidden flex flex-col bg-slate-50 min-w-0">
+        {/* Mobile top bar */}
+        {isMobile && (
+          <div className="flex items-center h-14 px-4 bg-white border-b border-slate-100 flex-shrink-0 gap-3">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
+                <Bot className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-slate-700 text-sm font-semibold" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
                 AI Dev Team
-              </p>
-              <p className="text-slate-400 text-xs">Platform M7</p>
+              </span>
             </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {/* Main nav */}
-          {NAV_ITEMS.map(({ icon: Icon, label, href }) => (
-            <Link key={href + label} href={href}>
-              <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
-                style={navLinkStyle(href)}
-                onMouseEnter={e => onEnter(e, href)}
-                onMouseLeave={e => onLeave(e, href)}>
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
-              </a>
-            </Link>
-          ))}
-
-          {/* M7 Intelligence section */}
-          <>
-            {!collapsed && (
-              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
-                Intelligence
-              </p>
-            )}
-            {M7_NAV.map(({ icon: Icon, label, href }) => (
-              <Link key={href} href={href}>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
-                  style={navLinkStyle(href)}
-                  onMouseEnter={e => onEnter(e, href)}
-                  onMouseLeave={e => onLeave(e, href)}>
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!collapsed && <span className="truncate">{label}</span>}
-                </a>
-              </Link>
-            ))}
-          </>
-
-          {/* Admin section */}
-          {ADMIN_NAV.some(item => !item.roles || item.roles.some(r => hasRole(r as any))) && (
-            <>
-              {!collapsed && (
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
-                  Admin
-                </p>
-              )}
-              {ADMIN_NAV.map(({ icon: Icon, label, href, roles }) => {
-                if (roles && !roles.some(r => hasRole(r as any))) return null;
-                return (
-                  <Link key={href + label} href={href}>
-                    <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
-                      style={navLinkStyle(href)}
-                      onMouseEnter={e => onEnter(e, href)}
-                      onMouseLeave={e => onLeave(e, href)}>
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      {!collapsed && <span className="truncate">{label}</span>}
-                    </a>
-                  </Link>
-                );
-              })}
-            </>
-          )}
-        </nav>
-
-        {/* User section */}
-        <div className="p-3 flex-shrink-0 border-t border-slate-100">
-          {!collapsed ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <div className="ml-auto">
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
                 <span className="text-white text-xs font-bold">
                   {user?.name?.charAt(0).toUpperCase() || "U"}
                 </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-700 text-xs font-semibold truncate">{user?.name}</p>
-                <span className={roleBadgeClass}>{user?.role}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </Button>
             </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-full h-8 text-slate-400 hover:text-red-500 hover:bg-red-50"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-16 w-6 h-6 rounded-full flex items-center justify-center z-20 transition-colors bg-white border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 shadow-sm"
-        >
-          {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
-        </button>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-slate-50">
+          </div>
+        )}
         {children}
       </main>
     </div>
