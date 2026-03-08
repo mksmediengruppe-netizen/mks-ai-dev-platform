@@ -22,6 +22,12 @@ import EvaluationPage from "./pages/EvaluationPage";
 import CapabilityGapsPage from "./pages/CapabilityGapsPage";
 import RecoveryPage from "./pages/RecoveryPage";
 import KnownIssuesPage from "./pages/KnownIssuesPage";
+import RoadmapPage from "./pages/RoadmapPage";
+import BacklogPage from "./pages/BacklogPage";
+import ArchitecturePage from "./pages/ArchitecturePage";
+import ReleasesPage from "./pages/ReleasesPage";
+import RisksPage from "./pages/RisksPage";
+import ApprovalsPage from "./pages/ApprovalsPage";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -50,6 +56,13 @@ function Router() {
       <Route path="/capability-gaps" component={() => <ProtectedRoute component={CapabilityGapsPage} />} />
       <Route path="/recovery"        component={() => <ProtectedRoute component={RecoveryPage} />} />
       <Route path="/known-issues"     component={() => <ProtectedRoute component={KnownIssuesPage} />} />
+      {/* M8 routes */}
+      <Route path="/roadmap"           component={() => <ProtectedRoute component={RoadmapPage} />} />
+      <Route path="/backlog"           component={() => <ProtectedRoute component={BacklogPage} />} />
+      <Route path="/architecture"      component={() => <ProtectedRoute component={ArchitecturePage} />} />
+      <Route path="/releases"          component={() => <ProtectedRoute component={ReleasesPage} />} />
+      <Route path="/risks"             component={() => <ProtectedRoute component={RisksPage} />} />
+      <Route path="/approvals"         component={() => <ProtectedRoute component={ApprovalsPage} />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

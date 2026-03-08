@@ -12,7 +12,7 @@ import {
   Bot, LayoutDashboard, MessageSquare, FileText,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   Zap, Code2, Globe, Brain, BarChart2, Puzzle, ShieldCheck,
-  AlertTriangle, Menu, X
+  AlertTriangle, Menu, X, Map, ListTodo, Cpu, Rocket, ShieldAlert, ClipboardCheck
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +38,15 @@ const M7_NAV: NavItem[] = [
   { icon: Puzzle,         label: "Capability Gaps", href: "/capability-gaps" },
   { icon: ShieldCheck,    label: "Recovery",        href: "/recovery" },
   { icon: AlertTriangle,  label: "Known Issues",    href: "/known-issues" },
+];
+
+const M8_NAV: NavItem[] = [
+  { icon: Map,             label: "Roadmap",      href: "/roadmap" },
+  { icon: ListTodo,        label: "Backlog",       href: "/backlog" },
+  { icon: Cpu,             label: "Architecture",  href: "/architecture" },
+  { icon: Rocket,          label: "Releases",      href: "/releases" },
+  { icon: ShieldAlert,     label: "Risks & Costs", href: "/risks" },
+  { icon: ClipboardCheck,  label: "Approvals",     href: "/approvals" },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -120,7 +129,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               style={{ fontFamily: "Geist, Inter, sans-serif" }}>
               AI Dev Team
             </p>
-            <p className="text-slate-400 text-xs">Platform M7</p>
+            <p className="text-slate-400 text-xs">Platform M8</p>
           </div>
         )}
         {isMobile && (
@@ -142,6 +151,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </p>
           )}
           {M7_NAV.map(item => <NavLink key={item.href} item={item} />)}
+        </>
+
+        {/* CTO Layer section */}
+        <>
+          {(isMobile || !collapsed) && (
+            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
+              CTO Layer
+            </p>
+          )}
+          {M8_NAV.map(item => <NavLink key={item.href} item={item} />)}
         </>
 
         {/* Admin section */}
