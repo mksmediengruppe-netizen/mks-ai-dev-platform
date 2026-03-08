@@ -12,7 +12,7 @@ import {
   Bot, LayoutDashboard, MessageSquare, FileText,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   Zap, Code2, Globe, Brain, BarChart2, Puzzle, ShieldCheck,
-  Menu, X
+  AlertTriangle, Menu, X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,10 +33,11 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const M7_NAV: NavItem[] = [
-  { icon: Brain,       label: "Memory",          href: "/memory" },
-  { icon: BarChart2,   label: "Evaluation",      href: "/evaluation" },
-  { icon: Puzzle,      label: "Capability Gaps", href: "/capability-gaps" },
-  { icon: ShieldCheck, label: "Recovery",        href: "/recovery" },
+  { icon: Brain,          label: "Memory",          href: "/memory" },
+  { icon: BarChart2,      label: "Evaluation",      href: "/evaluation" },
+  { icon: Puzzle,         label: "Capability Gaps", href: "/capability-gaps" },
+  { icon: ShieldCheck,    label: "Recovery",        href: "/recovery" },
+  { icon: AlertTriangle,  label: "Known Issues",    href: "/known-issues" },
 ];
 
 const ADMIN_NAV: NavItem[] = [

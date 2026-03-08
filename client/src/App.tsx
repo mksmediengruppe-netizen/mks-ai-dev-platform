@@ -21,6 +21,7 @@ import MemoryPage from "./pages/MemoryPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import CapabilityGapsPage from "./pages/CapabilityGapsPage";
 import RecoveryPage from "./pages/RecoveryPage";
+import KnownIssuesPage from "./pages/KnownIssuesPage";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/evaluation"      component={() => <ProtectedRoute component={EvaluationPage} />} />
       <Route path="/capability-gaps" component={() => <ProtectedRoute component={CapabilityGapsPage} />} />
       <Route path="/recovery"        component={() => <ProtectedRoute component={RecoveryPage} />} />
+      <Route path="/known-issues"     component={() => <ProtectedRoute component={KnownIssuesPage} />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

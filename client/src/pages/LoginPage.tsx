@@ -20,7 +20,7 @@ const FEATURES = [
 ];
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@platform.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -175,18 +175,8 @@ export default function LoginPage() {
             </form>
           </div>
 
-          {/* Test credentials */}
-          <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
-            <p className="text-blue-700 text-xs font-semibold mb-2">Test credentials</p>
-            <div className="space-y-1 text-xs text-slate-500">
-              <p><span className="text-slate-700 font-medium">Admin:</span> admin@platform.local / admin123</p>
-              <p><span className="text-slate-700 font-medium">Operator:</span> operator@platform.local / op123</p>
-              <p><span className="text-slate-700 font-medium">Viewer:</span> viewer@platform.local / view123</p>
-            </div>
-          </div>
-
           <p className="text-center text-slate-400 text-xs mt-5">
-            AI Dev Team Platform · M6 Release
+            AI Dev Team Platform · M7 Release
           </p>
         </div>
       </div>
