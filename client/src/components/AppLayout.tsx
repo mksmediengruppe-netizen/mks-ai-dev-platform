@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Bot, LayoutDashboard, MessageSquare, FileText,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
-  Zap, Code2, Globe
+  Zap, Code2, Globe, Brain, BarChart2, Puzzle, ShieldCheck
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,16 +22,23 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: MessageSquare, label: "Chat Workspace", href: "/chat" },
-  { icon: FileText, label: "Artifacts", href: "/artifacts" },
-  { icon: Zap, label: "Automations", href: "/chat" },
-  { icon: Code2, label: "Builder", href: "/chat" },
-  { icon: Globe, label: "Sites", href: "/chat" },
+  { icon: LayoutDashboard, label: "Dashboard",      href: "/dashboard" },
+  { icon: MessageSquare,   label: "Chat Workspace", href: "/chat" },
+  { icon: FileText,        label: "Artifacts",      href: "/artifacts" },
+  { icon: Zap,             label: "Automations",    href: "/chat" },
+  { icon: Code2,           label: "Builder",        href: "/chat" },
+  { icon: Globe,           label: "Sites",          href: "/chat" },
+];
+
+const M7_NAV: NavItem[] = [
+  { icon: Brain,       label: "Memory",          href: "/memory" },
+  { icon: BarChart2,   label: "Evaluation",      href: "/evaluation" },
+  { icon: Puzzle,      label: "Capability Gaps", href: "/capability-gaps" },
+  { icon: ShieldCheck, label: "Recovery",        href: "/recovery" },
 ];
 
 const ADMIN_NAV: NavItem[] = [
-  { icon: Users, label: "Users", href: "/users", roles: ["admin"] },
+  { icon: Users,    label: "Users",    href: "/users",    roles: ["admin"] },
   { icon: Settings, label: "Settings", href: "/settings", roles: ["admin", "operator"] },
 ];
 
@@ -46,8 +53,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const isActive = (href: string) => {
-    if (href === "/" && location === "/") return true;
-    if (href !== "/" && location.startsWith(href)) return true;
+    if (href === "/dashboard" && location === "/") return true;
+    if (location === href) return true;
+    if (href !== "/dashboard" && href !== "/" && location.startsWith(href)) return true;
     return false;
   };
 
@@ -56,6 +64,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     : user?.role === "operator"
     ? "role-operator"
     : "role-viewer";
+
+  const navLinkStyle = (href: string) => ({
+    color:      isActive(href) ? "#2563eb" : "#64748b",
+    background: isActive(href) ? "#eff6ff" : "transparent",
+    fontWeight: isActive(href) ? 500 : 400,
+  });
+
+  const onEnter = (e: React.MouseEvent, href: string) => {
+    if (!isActive(href)) {
+      (e.currentTarget as HTMLElement).style.background = "#f8fafc";
+      (e.currentTarget as HTMLElement).style.color = "#334155";
+    }
+  };
+  const onLeave = (e: React.MouseEvent, href: string) => {
+    if (!isActive(href)) {
+      (e.currentTarget as HTMLElement).style.background = "transparent";
+      (e.currentTarget as HTMLElement).style.color = "#64748b";
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -79,40 +106,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 style={{ fontFamily: "Geist, Inter, sans-serif" }}>
                 AI Dev Team
               </p>
-              <p className="text-slate-400 text-xs">Platform M6</p>
+              <p className="text-slate-400 text-xs">Platform M7</p>
             </div>
           )}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {/* Main nav */}
           {NAV_ITEMS.map(({ icon: Icon, label, href }) => (
             <Link key={href + label} href={href}>
-              <a
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100 group"
-                style={{
-                  color: isActive(href) ? "#2563eb" : "#64748b",
-                  background: isActive(href) ? "#eff6ff" : "transparent",
-                  fontWeight: isActive(href) ? 500 : 400,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive(href)) {
-                    (e.currentTarget as HTMLElement).style.background = "#f8fafc";
-                    (e.currentTarget as HTMLElement).style.color = "#334155";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive(href)) {
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = "#64748b";
-                  }
-                }}
-              >
+              <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
+                style={navLinkStyle(href)}
+                onMouseEnter={e => onEnter(e, href)}
+                onMouseLeave={e => onLeave(e, href)}>
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 {!collapsed && <span className="truncate">{label}</span>}
               </a>
             </Link>
           ))}
+
+          {/* M7 Intelligence section */}
+          <>
+            {!collapsed && (
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
+                Intelligence
+              </p>
+            )}
+            {M7_NAV.map(({ icon: Icon, label, href }) => (
+              <Link key={href} href={href}>
+                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
+                  style={navLinkStyle(href)}
+                  onMouseEnter={e => onEnter(e, href)}
+                  onMouseLeave={e => onLeave(e, href)}>
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  {!collapsed && <span className="truncate">{label}</span>}
+                </a>
+              </Link>
+            ))}
+          </>
 
           {/* Admin section */}
           {ADMIN_NAV.some(item => !item.roles || item.roles.some(r => hasRole(r as any))) && (
@@ -126,26 +158,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 if (roles && !roles.some(r => hasRole(r as any))) return null;
                 return (
                   <Link key={href + label} href={href}>
-                    <a
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
-                      style={{
-                        color: isActive(href) ? "#2563eb" : "#64748b",
-                        background: isActive(href) ? "#eff6ff" : "transparent",
-                        fontWeight: isActive(href) ? 500 : 400,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive(href)) {
-                          (e.currentTarget as HTMLElement).style.background = "#f8fafc";
-                          (e.currentTarget as HTMLElement).style.color = "#334155";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive(href)) {
-                          (e.currentTarget as HTMLElement).style.background = "transparent";
-                          (e.currentTarget as HTMLElement).style.color = "#64748b";
-                        }
-                      }}
-                    >
+                    <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-100"
+                      style={navLinkStyle(href)}
+                      onMouseEnter={e => onEnter(e, href)}
+                      onMouseLeave={e => onLeave(e, href)}>
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       {!collapsed && <span className="truncate">{label}</span>}
                     </a>
