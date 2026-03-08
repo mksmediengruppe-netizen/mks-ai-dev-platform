@@ -1,6 +1,6 @@
 /* ============================================================
    ChatPage — Professional Light theme
-   3-pane: history | chat | capabilities
+   Mobile-first: single column on mobile, 3-pane on desktop
    ============================================================ */
 
 import { useState, useRef, useEffect } from "react";
@@ -11,10 +11,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Send, Bot, User, Plus, Trash2, Loader2,
-  Sparkles, FileText, Code2, Zap, Globe, ChevronRight
+  Sparkles, FileText, Code2, Zap, Globe, ChevronRight,
+  History, X, PanelLeftOpen
 } from "lucide-react";
 import { toast } from "sonner";
-import { Streamdown } from "streamdown";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
 
@@ -67,6 +67,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,7 +83,8 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    if (!activeConvId) {
+    let convId = activeConvId;
+    if (!convId) {
       const newConv: Conversation = {
         id: nanoid(),
         title: content.slice(0, 40) + (content.length > 40 ? "…" : ""),
@@ -90,7 +92,8 @@ export default function ChatPage() {
         timestamp: new Date(),
       };
       setConversations(prev => [newConv, ...prev]);
-      setActiveConvId(newConv.id);
+      convId = newConv.id;
+      setActiveConvId(convId);
     }
 
     try {
@@ -100,7 +103,7 @@ export default function ChatPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${user?.token || ""}`,
         },
-        body: JSON.stringify({ message: content, conversation_id: activeConvId }),
+        body: JSON.stringify({ message: content, conversation_id: convId }),
       });
 
       if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -110,7 +113,7 @@ export default function ChatPage() {
       const assistantMsg: Message = { id: nanoid(), role: "assistant", content: reply, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMsg]);
       setConversations(prev => prev.map(c =>
-        c.id === activeConvId ? { ...c, lastMessage: reply.slice(0, 60), timestamp: new Date() } : c
+        c.id === convId ? { ...c, lastMessage: reply.slice(0, 60), timestamp: new Date() } : c
       ));
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "Unknown error";
@@ -127,10 +130,20 @@ export default function ChatPage() {
     }
   };
 
-  const newConversation = () => { setActiveConvId(null); setMessages([]); };
+  const newConversation = () => {
+    setActiveConvId(null);
+    setMessages([]);
+    setShowHistory(false);
+  };
+
   const deleteConversation = (id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeConvId === id) { setActiveConvId(null); setMessages([]); }
+  };
+
+  const selectConversation = (id: string) => {
+    setActiveConvId(id);
+    setShowHistory(false);
   };
 
   const formatTime = (date: Date) => {
@@ -143,9 +156,36 @@ export default function ChatPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Conversation History */}
-        <div className="w-60 flex-shrink-0 flex flex-col bg-white border-r border-slate-100">
+      <div className="flex flex-1 overflow-hidden relative">
+
+        {/* ── Mobile history overlay ─────────────────────────────── */}
+        {showHistory && (
+          <div
+            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            onClick={() => setShowHistory(false)}
+          />
+        )}
+
+        {/* ── Left: Conversation History ─────────────────────────── */}
+        <div
+          className={`
+            flex-shrink-0 flex flex-col bg-white border-r border-slate-100
+            fixed md:static inset-y-0 left-0 z-40 w-72 md:w-60
+            transition-transform duration-300 ease-in-out
+            ${showHistory ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          `}
+          style={{ top: 0 }}
+        >
+          {/* Mobile close button */}
+          <div className="flex items-center justify-between p-3 border-b border-slate-100">
+            <span className="text-slate-700 text-sm font-semibold">Chats</span>
+            <button
+              onClick={() => setShowHistory(false)}
+              className="md:hidden text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
           <div className="p-3 flex-shrink-0 border-b border-slate-100">
             <button
               onClick={newConversation}
@@ -159,7 +199,7 @@ export default function ChatPage() {
               {conversations.map(conv => (
                 <div
                   key={conv.id}
-                  onClick={() => setActiveConvId(conv.id)}
+                  onClick={() => selectConversation(conv.id)}
                   className="group flex items-start gap-2 p-2.5 rounded-lg cursor-pointer transition-all"
                   style={{
                     background: activeConvId === conv.id ? "#eff6ff" : "transparent",
@@ -189,29 +229,46 @@ export default function ChatPage() {
           </ScrollArea>
         </div>
 
-        {/* Center: Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        {/* ── Center: Chat Area ──────────────────────────────────── */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 min-w-0">
           {/* Header */}
-          <div className="flex items-center gap-3 px-6 h-14 flex-shrink-0 bg-white border-b border-slate-100">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+          <div className="flex items-center gap-2 px-3 md:px-6 h-14 flex-shrink-0 bg-white border-b border-slate-100">
+            {/* Mobile: history toggle button */}
+            <button
+              onClick={() => setShowHistory(true)}
+              className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors flex-shrink-0"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
               <Bot className="w-3.5 h-3.5 text-white" />
             </div>
-            <div>
-              <p className="text-slate-800 text-sm font-semibold" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
+            <div className="min-w-0">
+              <p className="text-slate-800 text-sm font-semibold truncate" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
                 AI Dev Team
               </p>
-              <p className="text-slate-400 text-xs">M6 · 48 capabilities active</p>
+              <p className="text-slate-400 text-xs">M7 · 48 capabilities active</p>
             </div>
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-emerald-600 text-xs font-medium">Online</span>
+              <span className="text-emerald-600 text-xs font-medium hidden sm:inline">Online</span>
             </div>
+
+            {/* Mobile: New Chat button in header */}
+            <button
+              onClick={newConversation}
+              className="md:hidden flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium flex-shrink-0"
+            >
+              <Plus className="w-3 h-3" />
+              <span>New</span>
+            </button>
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 px-6 py-4">
+          <ScrollArea className="flex-1 px-3 md:px-6 py-4">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full min-h-64 text-center">
+              <div className="flex flex-col items-center justify-center h-full min-h-64 text-center px-4">
                 <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-4">
                   <Sparkles className="w-7 h-7 text-blue-500" />
                 </div>
@@ -219,10 +276,10 @@ export default function ChatPage() {
                   style={{ fontFamily: "Geist, Inter, sans-serif" }}>
                   What can I build for you?
                 </h3>
-                <p className="text-slate-500 text-sm mb-8 max-w-sm">
+                <p className="text-slate-500 text-sm mb-6 max-w-sm">
                   Ask me to build apps, automate workflows, analyze sites, write docs, or anything else.
                 </p>
-                <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
                   {QUICK_PROMPTS.map(({ icon: Icon, label, prompt }) => (
                     <button
                       key={label}
@@ -238,33 +295,27 @@ export default function ChatPage() {
             ) : (
               <div className="space-y-5 max-w-3xl mx-auto">
                 {messages.map((msg) => (
-                  <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div key={msg.id} className={`flex gap-2 md:gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                     {msg.role === "assistant" && (
                       <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Bot className="w-3.5 h-3.5 text-white" />
                       </div>
                     )}
                     <div
-                      className="max-w-[75%] rounded-2xl px-4 py-3 text-sm"
+                      className="max-w-[85%] md:max-w-[75%] rounded-2xl px-3 md:px-4 py-3 text-sm"
                       style={msg.role === "user" ? {
                         background: "#2563eb",
                         color: "white",
                         borderBottomRightRadius: "4px",
                       } : {
                         background: "white",
+                        color: "#1e293b",
                         border: "1px solid #e2e8f0",
-                        color: "#334155",
                         borderBottomLeftRadius: "4px",
                         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                       }}
                     >
-                      {msg.role === "assistant" ? (
-                        <div className="prose prose-sm max-w-none text-slate-700">
-                          <Streamdown>{msg.content}</Streamdown>
-                        </div>
-                      ) : (
-                        <p className="leading-relaxed">{msg.content}</p>
-                      )}
+                      <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       <p className="text-xs mt-1.5 opacity-50">{formatTime(msg.timestamp)}</p>
                     </div>
                     {msg.role === "user" && (
@@ -291,8 +342,8 @@ export default function ChatPage() {
           </ScrollArea>
 
           {/* Input */}
-          <div className="px-6 py-4 flex-shrink-0 bg-white border-t border-slate-100">
-            <div className="max-w-3xl mx-auto flex gap-3">
+          <div className="px-3 md:px-6 py-3 md:py-4 flex-shrink-0 bg-white border-t border-slate-100">
+            <div className="max-w-3xl mx-auto flex gap-2 md:gap-3">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -300,28 +351,29 @@ export default function ChatPage() {
                 placeholder="Ask the AI Dev Team anything…"
                 className="flex-1 h-11 text-sm bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-400"
                 disabled={loading}
+                autoComplete="off"
               />
               <Button
                 onClick={() => sendMessage()}
                 disabled={loading || !input.trim()}
-                className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white border-0 disabled:opacity-40"
+                className="h-11 px-3 md:px-4 bg-blue-600 hover:bg-blue-700 text-white border-0 disabled:opacity-40 flex-shrink-0"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
-            <p className="text-center text-slate-400 text-xs mt-2">
-              Connected to {API_BASE} · M6 Production
+            <p className="text-center text-slate-400 text-xs mt-2 hidden sm:block">
+              Connected to {API_BASE} · M7 Production
             </p>
           </div>
         </div>
 
-        {/* Right: Capabilities Panel */}
-        <div className="w-64 flex-shrink-0 flex flex-col bg-white border-l border-slate-100">
+        {/* ── Right: Capabilities Panel (hidden on mobile) ───────── */}
+        <div className="hidden lg:flex w-64 flex-shrink-0 flex-col bg-white border-l border-slate-100">
           <div className="p-4 flex-shrink-0 border-b border-slate-100">
             <p className="text-slate-800 text-sm font-semibold" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
               Capabilities
             </p>
-            <p className="text-slate-400 text-xs mt-0.5">Available M6 modules</p>
+            <p className="text-slate-400 text-xs mt-0.5">Available M7 modules</p>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1">
@@ -338,6 +390,7 @@ export default function ChatPage() {
             </div>
           </ScrollArea>
         </div>
+
       </div>
     </AppLayout>
   );
