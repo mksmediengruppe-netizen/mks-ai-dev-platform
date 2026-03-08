@@ -33,7 +33,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/" component={() => <ProtectedRoute component={DashboardPage} />} />
+      <Route path="/" component={() => <Redirect to="/dashboard" />} />
+      <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/chat" component={() => <ProtectedRoute component={ChatPage} />} />
       <Route path="/artifacts" component={() => <ProtectedRoute component={ArtifactsPage} />} />
       <Route path="/users" component={() => <ProtectedRoute component={UsersPage} />} />

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Settings, Server, Info, CheckCircle2, XCircle, Loader2, Shield, Bell } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://2.56.240.170:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
 
 export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState(API_BASE);
@@ -167,7 +167,7 @@ export default function SettingsPage() {
                   { label: "Version", value: "Milestone 6 Production" },
                   { label: "Capabilities", value: "48 active endpoints" },
                   { label: "Modules", value: "M1–M6 + Addendum" },
-                  { label: "Server", value: "2.56.240.170:8000" },
+                  { label: "Server", value: "api.mksitdev.ru" },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
                     <span className="text-slate-500 text-xs">{label}</span>

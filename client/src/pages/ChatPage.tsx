@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://2.56.240.170:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
 
 interface Message {
   id: string;

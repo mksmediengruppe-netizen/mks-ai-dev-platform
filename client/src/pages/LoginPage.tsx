@@ -37,7 +37,7 @@ export default function LoginPage() {
     setLoading(false);
     if (result.success) {
       toast.success("Welcome back!");
-      navigate("/");
+      navigate("/dashboard");
     } else {
       toast.error(result.error || "Login failed");
     }

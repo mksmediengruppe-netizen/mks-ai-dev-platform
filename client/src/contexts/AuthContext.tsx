@@ -27,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // API base URL — points to chat-api
-const API_BASE = import.meta.env.VITE_API_URL || "http://2.56.240.170:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -63,18 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       const token = data.access_token;
 
-      // Decode JWT payload to get user info
-      let role: UserRole = "viewer";
-      let name = email.split("@")[0];
-      let userId = "user";
+      // Use user info from response body first, then try JWT decode
+      let role: UserRole = (data.user?.role as UserRole) || "viewer";
+      let name = data.user?.name || email.split("@")[0];
+      let userId = String(data.user?.id || "user");
 
       try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        role = (payload.role as UserRole) || "viewer";
-        name = payload.name || payload.sub || name;
-        userId = payload.sub || userId;
+        // URL-safe base64 decode for JWT payload
+        const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(b64));
+        role = (payload.role as UserRole) || role;
+        name = payload.name || payload.email?.split("@")[0] || name;
+        userId = String(payload.sub || userId);
       } catch {
-        // fallback to defaults
+        // fallback to data.user values already set
       }
 
       const newUser: User = { id: userId, email, name, role, token };
