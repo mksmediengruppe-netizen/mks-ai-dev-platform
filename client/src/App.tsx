@@ -1,6 +1,7 @@
 /* ============================================================
-   DESIGN SYSTEM: Obsidian Glass — AI Dev Team Platform
-   Dark glass morphism, blue/violet accent, sidebar layout
+   DESIGN SYSTEM: Professional Light — AI Dev Team Platform
+   Clean SaaS dashboard: white/slate palette, blue accent,
+   sidebar layout, crisp typography (Geist + Inter)
    ============================================================ */
 
 import { Toaster } from "@/components/ui/sonner";
@@ -18,7 +19,12 @@ import SettingsPage from "./pages/SettingsPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
   if (!isAuthenticated) return <Redirect to="/login" />;
   return <Component />;
 }
@@ -41,7 +47,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="light">
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
