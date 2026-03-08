@@ -1,8 +1,12 @@
 /* ============================================================
    UsersPage — Professional Light theme
-   Fetches real users from /users API endpoint (admin only)
-   Add User modal  → POST /users
-   Edit User modal → PATCH /users/{id}  (role + password reset)
+   Features:
+   - Fetch real users from GET /users
+   - Role filter bar (All / Admin / Operator / Viewer)
+   - Search by email
+   - Add User modal  → POST /users
+   - Edit User modal → PATCH /users/{id}  (role + password + active toggle)
+   - Delete User     → DELETE /users/{id} with confirm dialog
    ============================================================ */
 
 import { useEffect, useState } from "react";
@@ -13,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Users, Shield, Eye, Edit2, Trash2, Plus, UserCheck,
-  RefreshCw, AlertCircle, X, Loader2, EyeOff, Save,
+  RefreshCw, AlertCircle, X, Loader2, EyeOff, Save, Search,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,10 +33,10 @@ interface ApiUser {
   created_at: string;
 }
 
-const ROLE_STYLES: Record<string, { badge: string; dot: string }> = {
-  admin:    { badge: "bg-red-50 text-red-700 border-red-100",        dot: "bg-red-500" },
-  operator: { badge: "bg-blue-50 text-blue-700 border-blue-100",     dot: "bg-blue-500" },
-  viewer:   { badge: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" },
+const ROLE_STYLES: Record<string, { badge: string }> = {
+  admin:    { badge: "bg-red-50 text-red-700 border-red-100" },
+  operator: { badge: "bg-blue-50 text-blue-700 border-blue-100" },
+  viewer:   { badge: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 
 function nameFromEmail(email: string) {
@@ -52,8 +57,8 @@ function relativeTime(iso: string) {
 }
 
 // ── Shared Modal Shell ────────────────────────────────────────
-function ModalShell({ title, subtitle, onClose, children }: {
-  title: string; subtitle: string; onClose: () => void; children: React.ReactNode;
+function ModalShell({ title, subtitle, onClose, children, danger }: {
+  title: string; subtitle: string; onClose: () => void; children: React.ReactNode; danger?: boolean;
 }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -64,11 +69,11 @@ function ModalShell({ title, subtitle, onClose, children }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-md border overflow-hidden ${danger ? "border-red-200" : "border-slate-200"}`}>
+        <div className={`flex items-center justify-between px-6 py-5 border-b ${danger ? "border-red-100 bg-red-50/50" : "border-slate-100"}`}>
           <div>
-            <h2 className="text-slate-900 text-lg font-bold" style={{ fontFamily: "Geist, Inter, sans-serif" }}>{title}</h2>
-            <p className="text-slate-500 text-xs mt-0.5">{subtitle}</p>
+            <h2 className={`text-lg font-bold ${danger ? "text-red-800" : "text-slate-900"}`} style={{ fontFamily: "Geist, Inter, sans-serif" }}>{title}</h2>
+            <p className={`text-xs mt-0.5 ${danger ? "text-red-600" : "text-slate-500"}`}>{subtitle}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors">
             <X className="w-4 h-4" />
@@ -83,9 +88,9 @@ function ModalShell({ title, subtitle, onClose, children }: {
 // ── Role Picker ───────────────────────────────────────────────
 function RolePicker({ value, onChange }: { value: string; onChange: (r: "admin" | "operator" | "viewer") => void }) {
   const roles = [
-    { id: "admin" as const,    label: "Admin",    desc: "Full access to all features and settings",         cls: "bg-red-50 border-red-300 text-red-700" },
-    { id: "operator" as const, label: "Operator", desc: "Can manage chats, artifacts, and workflows",       cls: "bg-blue-50 border-blue-300 text-blue-700" },
-    { id: "viewer" as const,   label: "Viewer",   desc: "Read-only access to dashboards and reports",       cls: "bg-slate-100 border-slate-300 text-slate-700" },
+    { id: "admin" as const,    label: "Admin",    desc: "Full access to all features and settings",   cls: "bg-red-50 border-red-300 text-red-700" },
+    { id: "operator" as const, label: "Operator", desc: "Can manage chats, artifacts, and workflows", cls: "bg-blue-50 border-blue-300 text-blue-700" },
+    { id: "viewer" as const,   label: "Viewer",   desc: "Read-only access to dashboards and reports", cls: "bg-slate-100 border-slate-300 text-slate-700" },
   ];
   return (
     <div className="space-y-1.5">
@@ -140,9 +145,7 @@ function AddUserModal({ token, onClose, onCreated }: {
         toast.success(`User ${data.email} created`);
         onCreated({ id: data.id, email: data.email, role: data.role, is_active: true, created_at: new Date().toISOString() });
         onClose();
-      } else {
-        toast.error(data.detail || "Failed to create user");
-      }
+      } else { toast.error(data.detail || "Failed to create user"); }
     } catch { toast.error("Network error — please try again"); }
     finally { setLoading(false); }
   };
@@ -190,22 +193,24 @@ function AddUserModal({ token, onClose, onCreated }: {
 function EditUserModal({ token, targetUser, onClose, onUpdated }: {
   token: string; targetUser: ApiUser; onClose: () => void; onUpdated: (u: ApiUser) => void;
 }) {
-  const [role, setRole]             = useState<"admin" | "operator" | "viewer">(targetUser.role);
+  const [role, setRole]               = useState<"admin" | "operator" | "viewer">(targetUser.role);
+  const [isActive, setIsActive]       = useState(targetUser.is_active);
   const [newPassword, setNewPassword] = useState("");
-  const [showPwd, setShowPwd]       = useState(false);
-  const [resetPwd, setResetPwd]     = useState(false);
-  const [loading, setLoading]       = useState(false);
-  const [pwdError, setPwdError]     = useState("");
+  const [showPwd, setShowPwd]         = useState(false);
+  const [resetPwd, setResetPwd]       = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [pwdError, setPwdError]       = useState("");
 
-  const hasChanges = role !== targetUser.role || (resetPwd && newPassword.length >= 6);
+  const hasChanges = role !== targetUser.role || isActive !== targetUser.is_active || (resetPwd && newPassword.length >= 6);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (resetPwd && newPassword.length < 6) { setPwdError("Minimum 6 characters"); return; }
     setPwdError("");
 
-    const body: Record<string, string> = {};
+    const body: Record<string, unknown> = {};
     if (role !== targetUser.role) body.role = role;
+    if (isActive !== targetUser.is_active) body.is_active = isActive;
     if (resetPwd && newPassword) body.password = newPassword;
 
     if (!Object.keys(body).length) { toast.info("No changes to save"); return; }
@@ -222,9 +227,7 @@ function EditUserModal({ token, targetUser, onClose, onUpdated }: {
         toast.success(`User ${data.email} updated`);
         onUpdated(data as ApiUser);
         onClose();
-      } else {
-        toast.error(data.detail || "Failed to update user");
-      }
+      } else { toast.error(data.detail || "Failed to update user"); }
     } catch { toast.error("Network error — please try again"); }
     finally { setLoading(false); }
   };
@@ -246,31 +249,35 @@ function EditUserModal({ token, targetUser, onClose, onUpdated }: {
         {/* Role */}
         <RolePicker value={role} onChange={setRole} />
 
+        {/* Active toggle */}
+        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <div>
+            <p className="text-slate-700 text-sm font-medium">Account Status</p>
+            <p className="text-slate-400 text-xs mt-0.5">{isActive ? "User can log in and use the platform" : "User is blocked from logging in"}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsActive(v => !v)}
+            className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${isActive ? "bg-emerald-500" : "bg-slate-300"}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isActive ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+
         {/* Password reset */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <input
-              id="reset-pwd-toggle"
-              type="checkbox"
-              checked={resetPwd}
+            <input id="reset-pwd-toggle" type="checkbox" checked={resetPwd}
               onChange={e => { setResetPwd(e.target.checked); setNewPassword(""); setPwdError(""); }}
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 accent-blue-600"
-            />
-            <Label htmlFor="reset-pwd-toggle" className="text-slate-700 text-sm font-medium cursor-pointer">
-              Reset password
-            </Label>
+              className="w-4 h-4 rounded border-slate-300 accent-blue-600" />
+            <Label htmlFor="reset-pwd-toggle" className="text-slate-700 text-sm font-medium cursor-pointer">Reset password</Label>
           </div>
           {resetPwd && (
             <div className="relative">
-              <Input
-                type={showPwd ? "text" : "password"}
-                value={newPassword}
+              <Input type={showPwd ? "text" : "password"} value={newPassword}
                 onChange={e => { setNewPassword(e.target.value); setPwdError(""); }}
-                placeholder="New password (min. 6 chars)"
-                autoComplete="new-password"
-                autoFocus
-                className={`h-10 text-sm bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 pr-10 ${pwdError ? "border-red-400" : ""}`}
-              />
+                placeholder="New password (min. 6 chars)" autoComplete="new-password" autoFocus
+                className={`h-10 text-sm bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 pr-10 ${pwdError ? "border-red-400" : ""}`} />
               <button type="button" onClick={() => setShowPwd(v => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -294,15 +301,65 @@ function EditUserModal({ token, targetUser, onClose, onUpdated }: {
   );
 }
 
+// ── Delete Confirm Modal ──────────────────────────────────────
+function DeleteConfirmModal({ token, targetUser, onClose, onDeleted }: {
+  token: string; targetUser: ApiUser; onClose: () => void; onDeleted: (id: number) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/users/${targetUser.id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`User ${targetUser.email} deleted`);
+        onDeleted(targetUser.id);
+        onClose();
+      } else { toast.error(data.detail || "Failed to delete user"); }
+    } catch { toast.error("Network error — please try again"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <ModalShell title="Delete User" subtitle="This action cannot be undone" onClose={onClose} danger>
+      <div className="px-6 py-5 space-y-5">
+        <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 text-sm font-medium">Are you sure you want to delete this user?</p>
+            <p className="text-red-600 text-xs mt-1">
+              <strong>{targetUser.email}</strong> ({targetUser.role}) will lose all access to the platform immediately.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}
+            className="flex-1 h-10 text-sm border-slate-200 text-slate-600 bg-white">Cancel</Button>
+          <Button type="button" onClick={handleDelete} disabled={loading}
+            className="flex-1 h-10 text-sm bg-red-600 hover:bg-red-700 text-white border-0">
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Deleting…</> : <><Trash2 className="w-4 h-4 mr-2" />Delete User</>}
+          </Button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────
 export default function UsersPage() {
   const { user } = useAuth();
-  const [users, setUsers]         = useState<ApiUser[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
-  const [showAdd, setShowAdd]     = useState(false);
+  const [users, setUsers]           = useState<ApiUser[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string | null>(null);
+  const [showAdd, setShowAdd]       = useState(false);
   const [editTarget, setEditTarget] = useState<ApiUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ApiUser | null>(null);
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "operator" | "viewer">("all");
+  const [search, setSearch]         = useState("");
 
   const fetchUsers = async () => {
     if (!user?.token) return;
@@ -319,13 +376,16 @@ export default function UsersPage() {
 
   const handleCreated = (u: ApiUser) => setUsers(prev => [u, ...prev]);
   const handleUpdated = (u: ApiUser) => setUsers(prev => prev.map(x => x.id === u.id ? u : x));
+  const handleDeleted = (id: number) => setUsers(prev => prev.filter(x => x.id !== id));
 
   const admins    = users.filter(u => u.role === "admin").length;
   const operators = users.filter(u => u.role === "operator").length;
   const viewers   = users.filter(u => u.role === "viewer").length;
   const isAdmin   = user?.role === "admin";
 
-  const filteredUsers = roleFilter === "all" ? users : users.filter(u => u.role === roleFilter);
+  const filteredUsers = users
+    .filter(u => roleFilter === "all" || u.role === roleFilter)
+    .filter(u => !search.trim() || u.email.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <AppLayout>
@@ -359,31 +419,41 @@ export default function UsersPage() {
         <ScrollArea className="flex-1 p-6">
           <div className="max-w-4xl">
             {/* Role filter bar */}
-            <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               {([
-                { id: "all" as const,      label: "All Users",  count: users.length,    active: "bg-slate-800 text-white border-slate-800",   inactive: "bg-white text-slate-600 border-slate-200 hover:border-slate-300" },
+                { id: "all" as const,      label: "All Users", count: users.length,    active: "bg-slate-800 text-white border-slate-800",   inactive: "bg-white text-slate-600 border-slate-200 hover:border-slate-300" },
                 { id: "admin" as const,    label: "Admin",     count: admins,          active: "bg-red-600 text-white border-red-600",       inactive: "bg-white text-red-600 border-red-200 hover:border-red-300" },
                 { id: "operator" as const, label: "Operator",  count: operators,       active: "bg-blue-600 text-white border-blue-600",     inactive: "bg-white text-blue-600 border-blue-200 hover:border-blue-300" },
                 { id: "viewer" as const,   label: "Viewer",    count: viewers,         active: "bg-slate-500 text-white border-slate-500",   inactive: "bg-white text-slate-500 border-slate-200 hover:border-slate-300" },
               ]).map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setRoleFilter(f.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                    roleFilter === f.id ? f.active : f.inactive
-                  }`}
-                >
+                <button key={f.id} onClick={() => setRoleFilter(f.id)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${roleFilter === f.id ? f.active : f.inactive}`}>
                   {f.label}
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    roleFilter === f.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-                  }`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${roleFilter === f.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
                     {loading ? "…" : f.count}
                   </span>
                 </button>
               ))}
             </div>
 
-            {/* Role summary */}
+            {/* Search bar */}
+            <div className="relative mb-5">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by email…"
+                className="h-9 pl-9 text-sm bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-400"
+              />
+              {search && (
+                <button onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Role summary cards */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               {[
                 { icon: Shield,    iconBg: "bg-red-50",    iconColor: "text-red-600",   label: "Admins",    count: admins },
@@ -429,22 +499,21 @@ export default function UsersPage() {
               {!loading && users.length === 0 && !error && (
                 <div className="px-5 py-10 text-center text-slate-400 text-sm">No users found.</div>
               )}
-
               {!loading && filteredUsers.length === 0 && users.length > 0 && (
                 <div className="px-5 py-8 text-center text-slate-400 text-sm">
-                  No {roleFilter} users found.
+                  {search ? `No users matching "${search}"` : `No ${roleFilter} users found.`}
                 </div>
               )}
 
               {!loading && filteredUsers.map((u, i) => {
-                const roleStyle    = ROLE_STYLES[u.role] || ROLE_STYLES.viewer;
-                const displayName  = nameFromEmail(u.email);
+                const roleStyle     = ROLE_STYLES[u.role] || ROLE_STYLES.viewer;
+                const displayName   = nameFromEmail(u.email);
                 const isCurrentUser = u.email === user?.email;
                 return (
                   <div key={u.id}
-                    className={`grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-5 py-4 ${i < filteredUsers.length - 1 ? "border-b border-slate-50" : ""} hover:bg-slate-50 transition-colors ${isCurrentUser ? "bg-blue-50/30" : ""}`}>
+                    className={`grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-5 py-4 ${i < filteredUsers.length - 1 ? "border-b border-slate-50" : ""} hover:bg-slate-50 transition-colors ${isCurrentUser ? "bg-blue-50/30" : ""} ${!u.is_active ? "opacity-60" : ""}`}>
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${u.is_active ? "bg-gradient-to-br from-blue-500 to-indigo-600" : "bg-slate-300"}`}>
                         <span className="text-white text-xs font-bold">{displayName[0].toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
@@ -453,10 +522,13 @@ export default function UsersPage() {
                           {isCurrentUser && (
                             <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-medium">you</span>
                           )}
+                          {!u.is_active && (
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-medium">inactive</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 mt-0.5">
                           <div className={`w-1.5 h-1.5 rounded-full ${u.is_active ? "bg-emerald-500" : "bg-slate-300"}`} />
-                          <span className="text-slate-400 text-xs">{u.is_active ? "active" : "inactive"}</span>
+                          <span className="text-slate-400 text-xs">{u.is_active ? "active" : "blocked"}</span>
                         </div>
                       </div>
                     </div>
@@ -467,24 +539,23 @@ export default function UsersPage() {
                     <span className="text-slate-400 text-xs whitespace-nowrap">{relativeTime(u.created_at)}</span>
                     <div className="flex items-center gap-1.5">
                       {isAdmin && (
-                        <button
-                          onClick={() => setEditTarget(u)}
+                        <button onClick={() => setEditTarget(u)}
                           className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-500 flex items-center justify-center transition-colors"
-                          title="Edit user"
-                        >
+                          title="Edit user">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      <button
-                        onClick={() => {
-                          if (isCurrentUser) { toast.error("You cannot delete your own account"); return; }
-                          toast.info("Delete user — coming soon");
-                        }}
-                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-red-500 text-slate-500 flex items-center justify-center transition-colors"
-                        title="Delete user"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (isCurrentUser) { toast.error("You cannot delete your own account"); return; }
+                            setDeleteTarget(u);
+                          }}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-red-500 text-slate-500 flex items-center justify-center transition-colors"
+                          title="Delete user">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -504,6 +575,9 @@ export default function UsersPage() {
       )}
       {editTarget && user?.token && (
         <EditUserModal token={user.token} targetUser={editTarget} onClose={() => setEditTarget(null)} onUpdated={handleUpdated} />
+      )}
+      {deleteTarget && user?.token && (
+        <DeleteConfirmModal token={user.token} targetUser={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={handleDeleted} />
       )}
     </AppLayout>
   );
