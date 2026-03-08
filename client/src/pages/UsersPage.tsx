@@ -302,6 +302,7 @@ export default function UsersPage() {
   const [error, setError]         = useState<string | null>(null);
   const [showAdd, setShowAdd]     = useState(false);
   const [editTarget, setEditTarget] = useState<ApiUser | null>(null);
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "operator" | "viewer">("all");
 
   const fetchUsers = async () => {
     if (!user?.token) return;
@@ -323,6 +324,8 @@ export default function UsersPage() {
   const operators = users.filter(u => u.role === "operator").length;
   const viewers   = users.filter(u => u.role === "viewer").length;
   const isAdmin   = user?.role === "admin";
+
+  const filteredUsers = roleFilter === "all" ? users : users.filter(u => u.role === roleFilter);
 
   return (
     <AppLayout>
@@ -355,6 +358,31 @@ export default function UsersPage() {
 
         <ScrollArea className="flex-1 p-6">
           <div className="max-w-4xl">
+            {/* Role filter bar */}
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
+              {([
+                { id: "all" as const,      label: "All Users",  count: users.length,    active: "bg-slate-800 text-white border-slate-800",   inactive: "bg-white text-slate-600 border-slate-200 hover:border-slate-300" },
+                { id: "admin" as const,    label: "Admin",     count: admins,          active: "bg-red-600 text-white border-red-600",       inactive: "bg-white text-red-600 border-red-200 hover:border-red-300" },
+                { id: "operator" as const, label: "Operator",  count: operators,       active: "bg-blue-600 text-white border-blue-600",     inactive: "bg-white text-blue-600 border-blue-200 hover:border-blue-300" },
+                { id: "viewer" as const,   label: "Viewer",    count: viewers,         active: "bg-slate-500 text-white border-slate-500",   inactive: "bg-white text-slate-500 border-slate-200 hover:border-slate-300" },
+              ]).map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setRoleFilter(f.id)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                    roleFilter === f.id ? f.active : f.inactive
+                  }`}
+                >
+                  {f.label}
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    roleFilter === f.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                  }`}>
+                    {loading ? "…" : f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
             {/* Role summary */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               {[
@@ -402,13 +430,19 @@ export default function UsersPage() {
                 <div className="px-5 py-10 text-center text-slate-400 text-sm">No users found.</div>
               )}
 
-              {!loading && users.map((u, i) => {
+              {!loading && filteredUsers.length === 0 && users.length > 0 && (
+                <div className="px-5 py-8 text-center text-slate-400 text-sm">
+                  No {roleFilter} users found.
+                </div>
+              )}
+
+              {!loading && filteredUsers.map((u, i) => {
                 const roleStyle    = ROLE_STYLES[u.role] || ROLE_STYLES.viewer;
                 const displayName  = nameFromEmail(u.email);
                 const isCurrentUser = u.email === user?.email;
                 return (
                   <div key={u.id}
-                    className={`grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-5 py-4 ${i < users.length - 1 ? "border-b border-slate-50" : ""} hover:bg-slate-50 transition-colors ${isCurrentUser ? "bg-blue-50/30" : ""}`}>
+                    className={`grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-5 py-4 ${i < filteredUsers.length - 1 ? "border-b border-slate-50" : ""} hover:bg-slate-50 transition-colors ${isCurrentUser ? "bg-blue-50/30" : ""}`}>
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
                         <span className="text-white text-xs font-bold">{displayName[0].toUpperCase()}</span>
