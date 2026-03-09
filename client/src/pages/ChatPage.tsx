@@ -6,22 +6,27 @@
      GET  /conversations/{id}/messages → load messages
      POST /conversations/{id}/messages → send message
    Mobile-first: single column on mobile, 3-pane on desktop
+   URL-based routing: /chat and /chat/:id both work
+   Timestamps: Moscow time (UTC+3)
+   Auto-scroll: native div with overflow-y-auto
    ============================================================ */
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useParams, useLocation } from "wouter";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Send, Bot, User, Plus, Trash2, Loader2,
+  Send, Bot, User, Plus, Loader2,
   Sparkles, FileText, Code2, Zap, Globe, ChevronRight,
   X, PanelLeftOpen, RefreshCw, MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
 
 const API_BASE = "https://api.mksitdev.ru";
+const MOSCOW_TZ = "Europe/Moscow";
 
 interface Message {
   id: string | number;
@@ -61,8 +66,11 @@ const CAPABILITIES = [
 ];
 
 export default function ChatPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const token = user?.token || "";
+  const params = useParams<{ id?: string }>();
+  const [, navigate] = useLocation();
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -71,6 +79,8 @@ export default function ChatPage() {
   const [loadingConvs, setLoadingConvs] = useState(false);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // Native scrollable div ref for reliable auto-scroll
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const authHeaders = useCallback(() => ({
@@ -78,29 +88,46 @@ export default function ChatPage() {
     "Content-Type": "application/json",
   }), [token]);
 
+  // Handle 401 — auto logout
+  const handleUnauthorized = useCallback(() => {
+    toast.error("Session expired. Please log in again.");
+    logout?.();
+  }, [logout]);
+
   // Load conversations list
   const loadConversations = useCallback(async () => {
     if (!token) return;
     setLoadingConvs(true);
     try {
       const res = await fetch(`${API_BASE}/conversations`, { headers: authHeaders() });
+      if (res.status === 401) { handleUnauthorized(); return; }
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
+        return data as Conversation[];
       }
     } catch (e) {
       console.error("Failed to load conversations", e);
     } finally {
       setLoadingConvs(false);
     }
-  }, [token, authHeaders]);
+    return [];
+  }, [token, authHeaders, handleUnauthorized]);
+
+  const scrollToBottom = useCallback(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, []);
 
   // Load messages for a conversation
   const loadMessages = useCallback(async (convId: number) => {
     if (!token) return;
     setLoadingMsgs(true);
+    setMessages([]); // clear stale messages
     try {
       const res = await fetch(`${API_BASE}/conversations/${convId}/messages`, { headers: authHeaders() });
+      if (res.status === 401) { handleUnauthorized(); return; }
       if (res.ok) {
         const data = await res.json();
         const mapped: Message[] = data.map((m: any) => ({
@@ -116,15 +143,51 @@ export default function ChatPage() {
     } finally {
       setLoadingMsgs(false);
     }
-  }, [token, authHeaders]);
+  }, [token, authHeaders, handleUnauthorized]);
 
+  // On mount: load conversations, then open conversation from URL if present
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    if (!token) return;
+    loadConversations().then((convs) => {
+      const urlId = params?.id ? parseInt(params.id, 10) : null;
+      if (urlId && convs && convs.length > 0) {
+        const found = convs.find((c: Conversation) => c.id === urlId);
+        if (found) {
+          setActiveConv(found);
+          loadMessages(found.id);
+        }
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
+  // When URL changes (e.g. user navigates to /chat/54), open that conversation
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const urlId = params?.id ? parseInt(params.id, 10) : null;
+    if (!urlId) return;
+    if (activeConv?.id === urlId) return;
+    if (conversations.length === 0) return;
+    const found = conversations.find((c) => c.id === urlId);
+    if (found) {
+      setActiveConv(found);
+      loadMessages(found.id);
+    }
+  }, [params?.id, conversations, activeConv?.id, loadMessages]);
+
+  // Auto-scroll when messages update
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const timer = setTimeout(scrollToBottom, 80);
+    return () => clearTimeout(timer);
+  }, [messages, scrollToBottom]);
+
+  // Also scroll after loading finishes
+  useEffect(() => {
+    if (!loadingMsgs && messages.length > 0) {
+      const timer = setTimeout(scrollToBottom, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [loadingMsgs, messages.length, scrollToBottom]);
 
   const newConversation = async () => {
     if (!token) return;
@@ -135,12 +198,13 @@ export default function ChatPage() {
         headers: authHeaders(),
         body: JSON.stringify({ title: "New Chat", mode: "discuss" }),
       });
+      if (res.status === 401) { handleUnauthorized(); return; }
       if (res.ok) {
         const conv = await res.json();
         setConversations(prev => [conv, ...prev]);
         setActiveConv(conv);
         setMessages([]);
-        // Load messages (will include welcome message)
+        navigate(`/chat/${conv.id}`);
         await loadMessages(conv.id);
         setShowHistory(false);
       } else {
@@ -156,6 +220,7 @@ export default function ChatPage() {
   const selectConversation = async (conv: Conversation) => {
     setActiveConv(conv);
     setShowHistory(false);
+    navigate(`/chat/${conv.id}`);
     await loadMessages(conv.id);
   };
 
@@ -175,6 +240,7 @@ export default function ChatPage() {
           headers: authHeaders(),
           body: JSON.stringify({ title: content.slice(0, 60), mode: "discuss" }),
         });
+        if (res.status === 401) { handleUnauthorized(); return; }
         if (!res.ok) {
           toast.error("Failed to start conversation");
           setLoading(false);
@@ -184,8 +250,7 @@ export default function ChatPage() {
         setConversations(prev => [conv, ...prev]);
         setActiveConv(conv);
         convId = conv.id;
-        // Load initial welcome message
-        await loadMessages(conv.id);
+        navigate(`/chat/${conv.id}`);
       } catch (e) {
         toast.error("Network error");
         setLoading(false);
@@ -210,13 +275,15 @@ export default function ChatPage() {
         body: JSON.stringify({ content }),
       });
 
+      if (res.status === 401) { handleUnauthorized(); return; }
+
       if (res.ok) {
         const data = await res.json();
         // Add assistant response
         const assistantMsg: Message = {
           id: `resp-${Date.now()}`,
           role: "assistant",
-          content: data.response || data.action_result?.text || "Task received and processing...",
+          content: data.response || data.action_result?.text || "Task received and is being processed...",
           timestamp: new Date().toISOString(),
         };
         setMessages(prev => [...prev, assistantMsg]);
@@ -239,11 +306,17 @@ export default function ChatPage() {
   const formatTime = (ts: string) => {
     try {
       const date = new Date(ts);
+      if (isNaN(date.getTime())) return "";
       const diff = Date.now() - date.getTime();
       if (diff < 60000) return "just now";
       if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
       if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-      return date.toLocaleDateString();
+      return date.toLocaleDateString("ru-RU", {
+        timeZone: MOSCOW_TZ,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
     } catch {
       return "";
     }
@@ -251,7 +324,7 @@ export default function ChatPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative" style={{ height: "100%" }}>
 
         {/* ── Mobile history overlay ─────────────────────────────── */}
         {showHistory && (
@@ -292,11 +365,11 @@ export default function ChatPage() {
           </div>
 
           {/* New Chat button */}
-          <div className="p-3 flex-shrink-0 border-b border-slate-100">
+          <div className="p-2 border-b border-slate-100 flex-shrink-0">
             <button
               onClick={newConversation}
               disabled={loading}
-              className="w-full h-9 text-sm flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               New Chat
@@ -336,7 +409,7 @@ export default function ChatPage() {
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
                       <span className={`inline-block w-1.5 h-1.5 rounded-full ${conv.mode === "discuss" ? "bg-blue-400" : "bg-emerald-400"}`} />
-                      {conv.mode} · {formatTime(conv.updated_at)}
+                      {conv.mode} · {formatTime(conv.updated_at || conv.created_at)}
                     </p>
                   </div>
                 </div>
@@ -346,7 +419,7 @@ export default function ChatPage() {
         </div>
 
         {/* ── Center: Chat Area ──────────────────────────────────── */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 min-w-0">
+        <div className="flex-1 flex flex-col min-w-0" style={{ overflow: "hidden", height: "100%", background: "#f8fafc" }}>
 
           {/* Mobile top bar */}
           <div className="md:hidden flex items-center gap-2 px-3 py-2 bg-white border-b border-slate-100 flex-shrink-0">
@@ -357,7 +430,7 @@ export default function ChatPage() {
               <PanelLeftOpen className="w-4 h-4" />
             </button>
             <span className="text-slate-700 text-sm font-medium flex-1 truncate">
-              {activeConv?.title || "AI Dev Team"}
+              {activeConv?.title || "MKS IT Dev"}
             </span>
             <button
               onClick={newConversation}
@@ -368,11 +441,15 @@ export default function ChatPage() {
             </button>
           </div>
 
-          <ScrollArea className="flex-1">
+          {/* Messages container — native div for reliable scroll */}
+          <div
+            ref={messagesContainerRef}
+            style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
+          >
             <div className="max-w-3xl mx-auto px-3 md:px-6 py-4 md:py-6 space-y-4">
 
               {/* Welcome state */}
-              {!activeConv && messages.length === 0 && (
+              {!activeConv && messages.length === 0 && !loadingMsgs && (
                 <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
                   <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mb-4 shadow-lg shadow-blue-200">
                     <Sparkles className="w-7 h-7 text-white" />
@@ -399,7 +476,7 @@ export default function ChatPage() {
                     ))}
                   </div>
                   <p className="text-slate-400 text-xs mt-4">
-                    Connected to {API_BASE} · M7 Production
+                    Connected to {API_BASE} · MKS IT Dev v10
                   </p>
                 </div>
               )}
@@ -456,9 +533,10 @@ export default function ChatPage() {
                 </div>
               )}
 
-              <div ref={messagesEndRef} />
+              {/* Scroll sentinel */}
+              <div ref={messagesEndRef} style={{ height: 1 }} />
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input */}
           <div className="px-3 md:px-6 py-3 md:py-4 flex-shrink-0 bg-white border-t border-slate-100">
@@ -481,7 +559,7 @@ export default function ChatPage() {
               </Button>
             </div>
             <p className="text-center text-slate-400 text-xs mt-2 hidden sm:block">
-              Connected to {API_BASE} · M7 Production
+              Connected to {API_BASE} · MKS IT Dev v10
             </p>
           </div>
         </div>
@@ -492,7 +570,7 @@ export default function ChatPage() {
             <p className="text-slate-800 text-sm font-semibold" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
               Capabilities
             </p>
-            <p className="text-slate-400 text-xs mt-0.5">Available M7 modules</p>
+            <p className="text-slate-400 text-xs mt-0.5">Available modules</p>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1">

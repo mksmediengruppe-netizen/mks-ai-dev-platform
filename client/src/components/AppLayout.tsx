@@ -1,5 +1,7 @@
 /* ============================================================
    AppLayout — Professional Light sidebar + main content
+   M9: Added Portfolio, Automations, Batch Factory, Search,
+       Export/Archive, Metrics, Audit, Operator Queue
    MOBILE: hamburger menu, overlay, collapsible sidebar
    DESKTOP: persistent sidebar with collapse toggle
    ============================================================ */
@@ -12,7 +14,9 @@ import {
   Bot, LayoutDashboard, MessageSquare, FileText,
   Users, Settings, LogOut, ChevronLeft, ChevronRight,
   Zap, Code2, Globe, Brain, BarChart2, Puzzle, ShieldCheck,
-  AlertTriangle, Menu, X, Map, ListTodo, Cpu, Rocket, ShieldAlert, ClipboardCheck
+  AlertTriangle, Menu, X, Map, ListTodo, Cpu, Rocket, ShieldAlert,
+  ClipboardCheck, Briefcase, Factory, Search, Download, Activity,
+  Shield, Inbox, Clock, HeartPulse, Radio, Building2, PackageOpen
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,9 +31,25 @@ const NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard",      href: "/dashboard" },
   { icon: MessageSquare,   label: "Chat Workspace", href: "/chat" },
   { icon: FileText,        label: "Artifacts",      href: "/artifacts" },
-  { icon: Zap,             label: "Automations",    href: "/chat" },
-  { icon: Code2,           label: "Builder",        href: "/chat" },
-  { icon: Globe,           label: "Sites",          href: "/chat" },
+  { icon: Search,          label: "Global Search",  href: "/search" },
+];
+
+const M9_NAV: NavItem[] = [
+  { icon: Briefcase,  label: "Portfolio",       href: "/portfolio" },
+  { icon: Zap,        label: "Automations",     href: "/automations" },
+  { icon: Factory,    label: "Batch Factory",   href: "/batch-factory" },
+  { icon: Download,   label: "Export/Archive",  href: "/export-archive" },
+  { icon: Activity,   label: "Metrics",         href: "/metrics" },
+  { icon: Shield,     label: "Audit & Policy",  href: "/audit" },
+  { icon: Inbox,      label: "Operator Queue",  href: "/operator-queue" },
+];
+
+const M10_NAV: NavItem[] = [
+  { icon: Clock,       label: "Scheduler",     href: "/scheduler" },
+  { icon: HeartPulse,  label: "Health & Risk", href: "/health" },
+  { icon: Radio,       label: "Live Updates",  href: "/live" },
+  { icon: Building2,   label: "Enterprise",    href: "/enterprise" },
+  { icon: PackageOpen, label: "Deep Import",   href: "/deep-import" },
 ];
 
 const M7_NAV: NavItem[] = [
@@ -116,20 +136,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const SectionLabel = ({ label }: { label: string }) => (
+    <>
+      {(isMobile || !collapsed) && (
+        <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
+          {label}
+        </p>
+      )}
+    </>
+  );
+
   const SidebarContent = () => (
     <>
       {/* Logo */}
       <div className="flex items-center h-14 px-4 flex-shrink-0 border-b border-slate-100">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+          <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663413127711/7myqqxjLrvciy6sPuXJuMu/mks-it-dev-icon-N6zzAinHNSzVqdQoTspzvt.webp" alt="MKS IT Dev" className="w-full h-full object-cover" />
         </div>
         {(isMobile || !collapsed) && (
           <div className="ml-3 overflow-hidden flex-1">
             <p className="text-slate-800 text-sm font-bold leading-tight truncate"
               style={{ fontFamily: "Geist, Inter, sans-serif" }}>
-              AI Dev Team
+              MKS IT Dev
             </p>
-            <p className="text-slate-400 text-xs">Platform M8</p>
+            <p className="text-slate-400 text-xs">v10</p>
           </div>
         )}
         {isMobile && (
@@ -143,34 +173,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {NAV_ITEMS.map(item => <NavLink key={item.href + item.label} item={item} />)}
 
+        {/* M9 Operations section */}
+        <SectionLabel label="Operations M9" />
+        {M9_NAV.map(item => <NavLink key={item.href} item={item} />)}
+
+        {/* M10 Autonomous Execution */}
+        <SectionLabel label="Autonomous M10" />
+        {M10_NAV.map(item => <NavLink key={item.href} item={item} />)}
+
         {/* Intelligence section */}
-        <>
-          {(isMobile || !collapsed) && (
-            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
-              Intelligence
-            </p>
-          )}
-          {M7_NAV.map(item => <NavLink key={item.href} item={item} />)}
-        </>
+        <SectionLabel label="Intelligence" />
+        {M7_NAV.map(item => <NavLink key={item.href} item={item} />)}
 
         {/* CTO Layer section */}
-        <>
-          {(isMobile || !collapsed) && (
-            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
-              CTO Layer
-            </p>
-          )}
-          {M8_NAV.map(item => <NavLink key={item.href} item={item} />)}
-        </>
+        <SectionLabel label="CTO Layer" />
+        {M8_NAV.map(item => <NavLink key={item.href} item={item} />)}
 
         {/* Admin section */}
         {ADMIN_NAV.some(item => !item.roles || item.roles.some(r => hasRole(r as any))) && (
           <>
-            {(isMobile || !collapsed) && (
-              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider px-3 pt-4 pb-1">
-                Admin
-              </p>
-            )}
+            <SectionLabel label="Admin" />
             {ADMIN_NAV.map(item => {
               if (item.roles && !item.roles.some(r => hasRole(r as any))) return null;
               return <NavLink key={item.href + item.label} item={item} />;
@@ -270,11 +292,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
-                <Bot className="w-3.5 h-3.5 text-white" />
+              <div className="w-6 h-6 rounded overflow-hidden">
+                <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663413127711/7myqqxjLrvciy6sPuXJuMu/mks-it-dev-icon-N6zzAinHNSzVqdQoTspzvt.webp" alt="MKS IT Dev" className="w-full h-full object-cover" />
               </div>
               <span className="text-slate-700 text-sm font-semibold" style={{ fontFamily: "Geist, Inter, sans-serif" }}>
-                AI Dev Team
+                MKS IT Dev
               </span>
             </div>
             <div className="ml-auto">

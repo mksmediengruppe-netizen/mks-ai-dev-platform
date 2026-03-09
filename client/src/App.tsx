@@ -28,6 +28,21 @@ import ArchitecturePage from "./pages/ArchitecturePage";
 import ReleasesPage from "./pages/ReleasesPage";
 import RisksPage from "./pages/RisksPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
+// M9 pages
+import PortfolioPage from "./pages/PortfolioPage";
+import AutomationsPage from "./pages/AutomationsPage";
+import BatchFactoryPage from "./pages/BatchFactoryPage";
+import SearchPage from "./pages/SearchPage";
+import ExportArchivePage from "./pages/ExportArchivePage";
+import OperationalMetricsPage from "./pages/OperationalMetricsPage";
+import AuditPage from "./pages/AuditPage";
+import OperatorQueuePage from "./pages/OperatorQueuePage";
+// M10 pages
+import SchedulerPage from "./pages/SchedulerPage";
+import HealthIntelligencePage from "./pages/HealthIntelligencePage";
+import LiveUpdatesPage from "./pages/LiveUpdatesPage";
+import EnterprisePage from "./pages/EnterprisePage";
+import DeepImportPage from "./pages/DeepImportPage";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -47,6 +62,7 @@ function Router() {
       <Route path="/" component={() => <Redirect to="/dashboard" />} />
       <Route path="/dashboard"       component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/chat"            component={() => <ProtectedRoute component={ChatPage} />} />
+      <Route path="/chat/:id"         component={() => <ProtectedRoute component={ChatPage} />} />
       <Route path="/artifacts"       component={() => <ProtectedRoute component={ArtifactsPage} />} />
       <Route path="/users"           component={() => <ProtectedRoute component={UsersPage} />} />
       <Route path="/settings"        component={() => <ProtectedRoute component={SettingsPage} />} />
@@ -63,6 +79,21 @@ function Router() {
       <Route path="/releases"          component={() => <ProtectedRoute component={ReleasesPage} />} />
       <Route path="/risks"             component={() => <ProtectedRoute component={RisksPage} />} />
       <Route path="/approvals"         component={() => <ProtectedRoute component={ApprovalsPage} />} />
+      {/* M9 routes */}
+      <Route path="/portfolio"         component={() => <ProtectedRoute component={PortfolioPage} />} />
+      <Route path="/automations"       component={() => <ProtectedRoute component={AutomationsPage} />} />
+      <Route path="/batch-factory"     component={() => <ProtectedRoute component={BatchFactoryPage} />} />
+      <Route path="/search"            component={() => <ProtectedRoute component={SearchPage} />} />
+      <Route path="/export-archive"    component={() => <ProtectedRoute component={ExportArchivePage} />} />
+      <Route path="/metrics"           component={() => <ProtectedRoute component={OperationalMetricsPage} />} />
+      <Route path="/audit"             component={() => <ProtectedRoute component={AuditPage} />} />
+      <Route path="/operator-queue"    component={() => <ProtectedRoute component={OperatorQueuePage} />} />
+      {/* M10 routes */}
+      <Route path="/scheduler"          component={() => <ProtectedRoute component={SchedulerPage} />} />
+      <Route path="/health"             component={() => <ProtectedRoute component={HealthIntelligencePage} />} />
+      <Route path="/live"               component={() => <ProtectedRoute component={LiveUpdatesPage} />} />
+      <Route path="/enterprise"         component={() => <ProtectedRoute component={EnterprisePage} />} />
+      <Route path="/deep-import"        component={() => <ProtectedRoute component={DeepImportPage} />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
