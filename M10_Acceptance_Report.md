@@ -5,6 +5,8 @@
 **Milestone:** M10 — Autonomous Operations  
 **Platform:** https://app.mksitdev.ru  
 **API:** https://api.mksitdev.ru  
+**Repository:** https://github.com/mksmediengruppe-netizen/mks-ai-dev-platform  
+**Commit:** `5ad7827` — M10 Complete  
 **Prepared by:** AI Dev Team Platform  
 
 ---

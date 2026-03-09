@@ -4,6 +4,8 @@
 **Date:** 09.03.2026  
 **Environment:** Production — https://api.mksitdev.ru / https://app.mksitdev.ru  
 **Version:** v10 (chat-api 0.4.0)  
+**Repository:** https://github.com/mksmediengruppe-netizen/mks-ai-dev-platform  
+**Commit:** `5ad7827` — M10 Complete  
 **Prepared by:** AI Dev Team Platform  
 
 ---

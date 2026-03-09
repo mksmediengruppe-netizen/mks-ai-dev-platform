@@ -3,6 +3,8 @@
 
 **Date:** 09.03.2026  
 **Based on:** M10 Acceptance Report, Production Observations, Platform Gaps Analysis  
+**Repository:** https://github.com/mksmediengruppe-netizen/mks-ai-dev-platform  
+**Current branch:** `main` | **Base commit:** `5ad7827`  
 **Target delivery:** Q2 2026  
 
 ---
