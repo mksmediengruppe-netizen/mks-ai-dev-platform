@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE = "https://api.mksitdev.ru";
+import { API_BASE } from "../lib/api";
+// const API_BASE removed — now imported from lib/api
 const MOSCOW_TZ = "Europe/Moscow";
 
 interface Message {

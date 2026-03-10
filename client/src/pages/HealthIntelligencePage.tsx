@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface HealthScore {
   project_id: number;

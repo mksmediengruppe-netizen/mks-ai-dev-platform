@@ -12,7 +12,7 @@ import {
   Clock, ChevronRight, Loader2
 } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface SearchResult {
   type: string;

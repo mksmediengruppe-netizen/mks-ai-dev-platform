@@ -11,7 +11,7 @@ import { Brain, Search, RefreshCw, Tag, Clock, AlertCircle, Plus } from "lucide-
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE } from "../lib/api";
 
 interface MemorySnapshot {
   id: number;

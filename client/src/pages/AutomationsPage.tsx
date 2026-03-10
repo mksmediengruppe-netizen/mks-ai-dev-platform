@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface Automation {
   id: number;

@@ -12,7 +12,7 @@ import {
   Zap, Clock, ChevronRight, Filter
 } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface QueueItem {
   type: string;

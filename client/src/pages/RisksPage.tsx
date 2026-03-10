@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ShieldAlert, DollarSign, RefreshCw, Plus, AlertTriangle, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface Risk {
   id: number;
@@ -158,7 +158,7 @@ export default function RisksPage() {
                   <p className="text-slate-500">No risks recorded</p>
                 </div>
               ) : (
-                risks.sort((a, b) => b.risk_score - a.risk_score).map(risk => {
+                [...risks].sort((a, b) => b.risk_score - a.risk_score).map(risk => {
                   const lvl = RISK_LEVEL(risk.risk_score);
                   return (
                     <div key={risk.id} className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm">
@@ -194,7 +194,7 @@ export default function RisksPage() {
                   <p className="text-slate-500">No cost notes recorded</p>
                 </div>
               ) : (
-                costs.sort((a, b) => b.amount_usd - a.amount_usd).map(cost => (
+                [...costs].sort((a, b) => b.amount_usd - a.amount_usd).map(cost => (
                   <div key={cost.id} className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center flex-shrink-0">
                       {cost.is_recurring ? <TrendingUp className="w-5 h-5 text-teal-600" /> : <DollarSign className="w-5 h-5 text-teal-600" />}

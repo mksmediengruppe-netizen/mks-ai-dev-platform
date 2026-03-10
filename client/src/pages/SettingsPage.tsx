@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Settings, Server, Info, CheckCircle2, XCircle, Loader2, Shield, Bell } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE } from "../lib/api";
 
 export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState(API_BASE);

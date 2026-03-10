@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertTriangle, CheckCircle2, Clock, RefreshCw, Bug } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE = "https://api.mksitdev.ru";
+import { API_BASE } from "../lib/api";
 
 interface KnownIssue {
   id: number;

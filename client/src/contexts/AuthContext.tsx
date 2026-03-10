@@ -27,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // API base URL — points to chat-api
-const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE } from "../lib/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

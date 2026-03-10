@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Rocket, Plus, RefreshCw, ChevronDown, ChevronRight, CheckCircle2, Clock, AlertCircle, Package } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface Release {
   id: number;

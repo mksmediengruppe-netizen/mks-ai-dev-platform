@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { BarChart2, RefreshCw, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE } from "../lib/api";
 
 interface AgentMetric {
   agent: string;

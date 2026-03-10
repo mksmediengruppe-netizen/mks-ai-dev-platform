@@ -13,7 +13,7 @@ import {
   Circle, AlertCircle, Zap, Filter, Bot
 } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "https://api.mksitdev.ru";
+import { API_BASE as API } from "../lib/api";
 
 interface Task {
   id: number;
